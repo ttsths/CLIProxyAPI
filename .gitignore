@@ -32,6 +32,8 @@ CLAUDE.md
 GEMINI.md
 
 # Tooling metadata
+.wrangler/
+node_modules/
 .vscode/*
 .worktrees/
 .codex/*

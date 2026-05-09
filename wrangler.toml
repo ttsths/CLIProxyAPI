@@ -1,0 +1,26 @@
+name = "cli-proxy-api"
+main = "cloudflare/index.ts"
+compatibility_date = "2026-04-27"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+DEPLOY = "cloud"
+PORT = "8317"
+CONTAINER_SLEEP_AFTER = "10m"
+
+[[containers]]
+class_name = "CLIProxyAPIContainer"
+image = "./Dockerfile.cloudflare"
+max_instances = 1
+name = "cli-proxy-api"
+
+[[durable_objects.bindings]]
+name = "CLI_PROXY_CONTAINER"
+class_name = "CLIProxyAPIContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CLIProxyAPIContainer"]

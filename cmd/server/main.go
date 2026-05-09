@@ -50,6 +50,18 @@ func init() {
 	buildinfo.BuildDate = BuildDate
 }
 
+func bootstrapConfigSeedPath(workingDir string) string {
+	configPath := filepath.Join(workingDir, "config.yaml")
+	info, err := os.Stat(configPath)
+	if err == nil && !info.IsDir() {
+		data, errRead := os.ReadFile(configPath)
+		if errRead == nil && len(strings.TrimSpace(string(data))) > 0 {
+			return configPath
+		}
+	}
+	return filepath.Join(workingDir, "config.example.yaml")
+}
+
 // main is the entry point of the application.
 // It parses command-line flags, loads configuration, and starts the appropriate
 // service based on the provided flags (login, codex-login, or server mode).
@@ -236,6 +248,7 @@ func main() {
 	// Determine and load the configuration file.
 	// Prefer the Postgres store when configured, otherwise fallback to git or local files.
 	var configFilePath string
+	seedConfigPath := bootstrapConfigSeedPath(wd)
 	if usePostgresStore {
 		if pgStoreLocalPath == "" {
 			pgStoreLocalPath = wd
@@ -252,9 +265,8 @@ func main() {
 			log.Errorf("failed to initialize postgres token store: %v", err)
 			return
 		}
-		examplePath := filepath.Join(wd, "config.example.yaml")
 		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
-		if errBootstrap := pgStoreInst.Bootstrap(ctx, examplePath); errBootstrap != nil {
+		if errBootstrap := pgStoreInst.Bootstrap(ctx, seedConfigPath); errBootstrap != nil {
 			cancel()
 			log.Errorf("failed to bootstrap postgres-backed config: %v", errBootstrap)
 			return
@@ -316,9 +328,8 @@ func main() {
 			log.Errorf("failed to initialize object token store: %v", err)
 			return
 		}
-		examplePath := filepath.Join(wd, "config.example.yaml")
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		if errBootstrap := objectStoreInst.Bootstrap(ctx, examplePath); errBootstrap != nil {
+		if errBootstrap := objectStoreInst.Bootstrap(ctx, seedConfigPath); errBootstrap != nil {
 			cancel()
 			log.Errorf("failed to bootstrap object-backed config: %v", errBootstrap)
 			return
@@ -354,12 +365,11 @@ func main() {
 			configFilePath = filepath.Join(gitStoreRoot, "config", "config.yaml")
 		}
 		if _, statErr := os.Stat(configFilePath); errors.Is(statErr, fs.ErrNotExist) {
-			examplePath := filepath.Join(wd, "config.example.yaml")
-			if _, errExample := os.Stat(examplePath); errExample != nil {
+			if _, errExample := os.Stat(seedConfigPath); errExample != nil {
 				log.Errorf("failed to find template config file: %v", errExample)
 				return
 			}
-			if errCopy := misc.CopyConfigTemplate(examplePath, configFilePath); errCopy != nil {
+			if errCopy := misc.CopyConfigTemplate(seedConfigPath, configFilePath); errCopy != nil {
 				log.Errorf("failed to bootstrap git-backed config: %v", errCopy)
 				return
 			}

@@ -1,0 +1,17 @@
+{
+  "name": "cliproxyapi-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "go build -o test-output ./cmd/server && rm -f test-output && go test ./cmd/server ./internal/store",
+    "deploy:cloudflare": "wrangler deploy",
+    "deploy:cloudflare:dry-run": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.3.3",
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.85.0"
+  }
+}

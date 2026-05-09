@@ -144,11 +144,11 @@ func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
 }
 
 // Bootstrap synchronizes configuration and auth records between PostgreSQL and the local workspace.
-func (s *PostgresStore) Bootstrap(ctx context.Context, exampleConfigPath string) error {
+func (s *PostgresStore) Bootstrap(ctx context.Context, seedConfigPath string) error {
 	if err := s.EnsureSchema(ctx); err != nil {
 		return err
 	}
-	if err := s.syncConfigFromDatabase(ctx, exampleConfigPath); err != nil {
+	if err := s.syncConfigFromDatabase(ctx, seedConfigPath); err != nil {
 		return err
 	}
 	if err := s.syncAuthFromDatabase(ctx); err != nil {
@@ -392,17 +392,17 @@ func (s *PostgresStore) PersistConfig(ctx context.Context) error {
 	return s.persistConfig(ctx, data)
 }
 
-// syncConfigFromDatabase writes the database-stored config to disk or seeds the database from template.
-func (s *PostgresStore) syncConfigFromDatabase(ctx context.Context, exampleConfigPath string) error {
+// syncConfigFromDatabase writes the database-stored config to disk or seeds the database from a local config source.
+func (s *PostgresStore) syncConfigFromDatabase(ctx context.Context, seedConfigPath string) error {
 	query := fmt.Sprintf("SELECT content FROM %s WHERE id = $1", s.fullTableName(s.cfg.ConfigTable))
 	var content string
 	err := s.db.QueryRowContext(ctx, query, defaultConfigKey).Scan(&content)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		if _, errStat := os.Stat(s.configPath); errors.Is(errStat, fs.ErrNotExist) {
-			if exampleConfigPath != "" {
-				if errCopy := misc.CopyConfigTemplate(exampleConfigPath, s.configPath); errCopy != nil {
-					return fmt.Errorf("postgres store: copy example config: %w", errCopy)
+			if seedConfigPath != "" {
+				if errCopy := misc.CopyConfigTemplate(seedConfigPath, s.configPath); errCopy != nil {
+					return fmt.Errorf("postgres store: copy seed config: %w", errCopy)
 				}
 			} else {
 				if errCreate := os.MkdirAll(filepath.Dir(s.configPath), 0o700); errCreate != nil {

@@ -62,6 +62,8 @@ VisionCoder 还为我们的用户提供 <a href="https://coder.visioncoder.cn" t
 
 CLIProxyAPI 用户手册： [https://help.router-for.me/](https://help.router-for.me/cn/)
 
+Cloudflare Containers 部署说明： [README.cloudflare.md](README.cloudflare.md)
+
 ## 管理 API 文档
 
 请参见 [MANAGEMENT_API_CN.md](https://help.router-for.me/cn/management/api)

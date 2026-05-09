@@ -26,3 +26,16 @@ services:
       - ${CLI_PROXY_AUTH_PATH:-./auths}:/root/.cli-proxy-api
       - ${CLI_PROXY_LOG_PATH:-./logs}:/CLIProxyAPI/logs
     restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cli-proxy-cloudflared
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:-}
+    restart: unless-stopped
+    depends_on:
+      - cli-proxy-api
+    # Uncomment below to use self-created tunnel (with credentials JSON + config.yml) instead of token:
+    # volumes:
+    #   - ./cloudflared:/etc/cloudflared:ro

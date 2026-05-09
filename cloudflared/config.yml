@@ -1,0 +1,17 @@
+# Cloudflare Tunnel configuration (self-created tunnel mode).
+# If you use CF_TUNNEL_TOKEN (recommended), this file is NOT required.
+#
+# 1. Create tunnel:
+#    docker run --rm -v ./cloudflared:/etc/cloudflared cloudflare/cloudflared:latest tunnel create cli-proxy-api
+# 2. Note the tunnel ID printed, fill it below.
+# 3. Map DNS:
+#    docker run --rm -v ./cloudflared:/etc/cloudflared cloudflare/cloudflared:latest tunnel route dns <tunnel-id> proxy.yourdomain.com
+# 4. Uncomment the volume mapping in docker-compose.yml for cloudflared service.
+
+tunnel: <your-tunnel-id>
+credentials-file: /etc/cloudflared/<your-tunnel-id>.json
+
+ingress:
+  - hostname: proxy.yourdomain.com
+    service: http://cli-proxy-api:8317
+  - service: http_status:404

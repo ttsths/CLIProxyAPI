@@ -1,0 +1,93 @@
+name: Deploy to Cloudflare Containers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-cloudflare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Go build
+        run: |
+          go build -o test-output ./cmd/server
+          rm -f test-output
+
+      - name: Install Cloudflare deployment dependencies
+        run: npm ci
+
+      - name: Typecheck Worker entrypoint
+        run: npm run typecheck
+
+      - name: Sync Worker runtime secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLI_PROXY_CONFIG_B64: ${{ secrets.CLI_PROXY_CONFIG_B64 }}
+          PGSTORE_DSN: ${{ secrets.PGSTORE_DSN }}
+          PGSTORE_SCHEMA: ${{ secrets.PGSTORE_SCHEMA }}
+          PGSTORE_LOCAL_PATH: ${{ secrets.PGSTORE_LOCAL_PATH }}
+          GITSTORE_GIT_URL: ${{ secrets.GITSTORE_GIT_URL }}
+          GITSTORE_GIT_USERNAME: ${{ secrets.GITSTORE_GIT_USERNAME }}
+          GITSTORE_GIT_TOKEN: ${{ secrets.GITSTORE_GIT_TOKEN }}
+          GITSTORE_GIT_BRANCH: ${{ secrets.GITSTORE_GIT_BRANCH }}
+          GITSTORE_LOCAL_PATH: ${{ secrets.GITSTORE_LOCAL_PATH }}
+          OBJECTSTORE_ENDPOINT: ${{ secrets.OBJECTSTORE_ENDPOINT }}
+          OBJECTSTORE_ACCESS_KEY: ${{ secrets.OBJECTSTORE_ACCESS_KEY }}
+          OBJECTSTORE_SECRET_KEY: ${{ secrets.OBJECTSTORE_SECRET_KEY }}
+          OBJECTSTORE_BUCKET: ${{ secrets.OBJECTSTORE_BUCKET }}
+          OBJECTSTORE_LOCAL_PATH: ${{ secrets.OBJECTSTORE_LOCAL_PATH }}
+        run: |
+          set -euo pipefail
+          keys=(
+            CLI_PROXY_CONFIG_B64
+            PGSTORE_DSN
+            PGSTORE_SCHEMA
+            PGSTORE_LOCAL_PATH
+            GITSTORE_GIT_URL
+            GITSTORE_GIT_USERNAME
+            GITSTORE_GIT_TOKEN
+            GITSTORE_GIT_BRANCH
+            GITSTORE_LOCAL_PATH
+            OBJECTSTORE_ENDPOINT
+            OBJECTSTORE_ACCESS_KEY
+            OBJECTSTORE_SECRET_KEY
+            OBJECTSTORE_BUCKET
+            OBJECTSTORE_LOCAL_PATH
+          )
+
+          for key in "${keys[@]}"; do
+            value="${!key:-}"
+            if [ -n "${value}" ]; then
+              printf '%s' "${value}" | npx wrangler secret put "${key}"
+            fi
+          done
+
+      - name: Deploy Worker and container
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
